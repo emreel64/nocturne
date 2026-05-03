@@ -7,6 +7,22 @@
 <meta name="description" content="Nocturne is a student-run magazine out of Özel İzmir Amerikan Koleji. Films, music, books, the strange small things — the stuff that keeps us up." />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <meta name="theme-color" content="#161412" />
+
+<!-- Netlify Identity widget — picks up #invite_token / #recovery_token
+     in the URL and shows the password-setting modal. Also redirects
+     editors to /admin/ after a successful login. -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  if (window.netlifyIdentity) {
+    window.netlifyIdentity.on('init', function(user) {
+      if (!user) {
+        window.netlifyIdentity.on('login', function() {
+          document.location.href = '/admin/';
+        });
+      }
+    });
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,600;9..144,0,700;9..144,0,800;9..144,1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">

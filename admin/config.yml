@@ -1,0 +1,73 @@
+# Decap CMS configuration for Nocturne.
+# Editors visit /admin/, log in via Netlify Identity, and use this config
+# to add or edit issues without touching code. All changes get committed
+# to the GitHub repo, which triggers a Netlify rebuild.
+
+backend:
+  name: git-gateway
+  branch: main
+  # Friendly commit messages so the repo history reads nicely.
+  commit_messages:
+    create: 'Add issue "{{slug}}"'
+    update: 'Update issue "{{slug}}"'
+    delete: 'Delete issue "{{slug}}"'
+    uploadMedia: 'Upload "{{path}}"'
+    deleteMedia: 'Delete "{{path}}"'
+
+# Default upload location for new files (PDFs, covers, etc.)
+media_folder: "uploads"
+public_folder: "/uploads"
+
+# Site URL — used for preview links inside the CMS.
+site_url: https://nocturne-aci.netlify.app
+display_url: https://nocturne-aci.netlify.app
+
+# Tab title shown in the CMS browser tab.
+site_title: "Nocturne — Editor"
+
+collections:
+  - name: "issues"
+    label: "Issues"
+    description: "All published issues. The first issue in the list is the latest. Drag to reorder."
+    files:
+      - file: "content/issues.json"
+        name: "issues_data"
+        label: "All Issues"
+        description: "Add, edit, or remove issues. Mark which one is currently featured."
+        fields:
+          - label: "Current issue ID"
+            name: "current_issue_id"
+            widget: "string"
+            required: true
+            hint: "ID of the issue marked as 'Out now' on the landing page hero. Must match an ID in the list below."
+          - label: "Issues"
+            name: "issues"
+            widget: "list"
+            summary: "{{fields.label}}"
+            fields:
+              - label: "ID"
+                name: "id"
+                widget: "string"
+                required: true
+                hint: "Lowercase, dashes, no spaces. Example: nocturne-2026"
+                pattern: ['^[a-z0-9-]+$', 'Lowercase letters, numbers, and dashes only']
+              - label: "Label"
+                name: "label"
+                widget: "string"
+                required: true
+                hint: "Shown in the UI, e.g. 'Issue 03 · 2026'"
+              - label: "Title"
+                name: "title"
+                widget: "string"
+                default: "Nocturne"
+                required: true
+              - label: "PDF File"
+                name: "file"
+                widget: "file"
+                required: true
+                hint: "Upload the issue PDF, or pick an existing one."
+              - label: "Cover Image"
+                name: "cover"
+                widget: "image"
+                required: true
+                hint: "Cover JPEG (typically the first page of the PDF, 800px tall is plenty)."

@@ -1249,21 +1249,13 @@
   //      - title: big title ("The Spring Edition")
   //      - file:  path to the PDF, relative to this HTML file
   // ===========================================================================
-  var ISSUES = [
-    {
-      id: 'nocturne-2025',
-      label: 'Issue 02 · 2025',
-      title: 'Nocturne',
-      file: 'nocturne2_final12.pdf',
-      cover: 'covers/nocturne-2025.jpg'
-    },
-    {
-      id: 'nocturne-2024',
-      label: 'Issue 01 · 2024',
-      title: 'Nocturne',
-      file: 'Nocturne.pdf',
-      cover: 'covers/nocturne-2024.jpg'
-    }
+  // ISSUES is filled at boot from /content/issues.json (managed by the CMS).
+  // The hardcoded entries here are a fallback for local file:// previews
+  // where fetch can't reach the JSON.
+  var ISSUES = [];
+  var FALLBACK_ISSUES = [
+    { id: 'nocturne-2025', label: 'Issue 02 · 2025', title: 'Nocturne', file: 'nocturne2_final12.pdf', cover: 'covers/nocturne-2025.jpg' },
+    { id: 'nocturne-2024', label: 'Issue 01 · 2024', title: 'Nocturne', file: 'Nocturne.pdf', cover: 'covers/nocturne-2024.jpg' }
   ];
   // ===========================================================================
 
@@ -2623,10 +2615,31 @@
     });
   }
 
+  // Fetch the CMS-managed issue list first, then boot.
+  function bootstrapApp() {
+    fetch('content/issues.json', { cache: 'no-cache' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject('not ok'); })
+      .then(function(data) {
+        var loaded = (data && data.issues) || [];
+        if (loaded.length) {
+          loaded.forEach(function(i) { ISSUES.push(i); });
+        } else {
+          FALLBACK_ISSUES.forEach(function(i) { ISSUES.push(i); });
+        }
+      })
+      .catch(function(err) {
+        console.warn('Could not load issues.json, using fallback:', err);
+        FALLBACK_ISSUES.forEach(function(i) { ISSUES.push(i); });
+      })
+      .then(function() {
+        setTimeout(init, 50);
+      });
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 50); });
+    document.addEventListener('DOMContentLoaded', bootstrapApp);
   } else {
-    setTimeout(init, 50);
+    bootstrapApp();
   }
 </script>
 </body>

@@ -1389,6 +1389,105 @@
 
 <script>
   (function() {
+    // -------------------- Dynamic issue data --------------------
+    // Source of truth is /content/issues.json, edited via the CMS.
+    // We fetch it on load and render the hero, dropdown, picker, and
+    // gallery from the result. If the fetch fails (e.g. opening this
+    // file directly via file://), we fall back to hardcoded data so
+    // local previews still work.
+    var FALLBACK_ISSUES_DATA = {
+      current_issue_id: 'nocturne-2025',
+      issues: [
+        { id: 'nocturne-2025', label: 'Issue 02 · 2025', title: 'Nocturne', file: 'nocturne2_final12.pdf', cover: 'covers/nocturne-2025.jpg' },
+        { id: 'nocturne-2024', label: 'Issue 01 · 2024', title: 'Nocturne', file: 'Nocturne.pdf', cover: 'covers/nocturne-2024.jpg' }
+      ]
+    };
+
+    function escHtml(s) {
+      return String(s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+      });
+    }
+
+    function renderIssueData(data) {
+      var issues = (data && data.issues) || [];
+      if (!issues.length) return;
+      var currentId = (data && data.current_issue_id) || issues[0].id;
+      var current = null;
+      for (var i = 0; i < issues.length; i++) {
+        if (issues[i].id === currentId) { current = issues[i]; break; }
+      }
+      if (!current) current = issues[0];
+
+      // Hero eyebrow
+      var eyebrow = document.querySelector('.hero-eyebrow');
+      if (eyebrow) {
+        eyebrow.innerHTML = '<span class="dot"></span>' + escHtml(current.label) + ' — Out now';
+      }
+      // Hero cover (link + img)
+      var heroCover = document.querySelector('.hero-cover');
+      if (heroCover) heroCover.href = 'read.html?issue=' + encodeURIComponent(current.id);
+      var heroCoverImg = heroCover && heroCover.querySelector('img');
+      if (heroCoverImg) {
+        heroCoverImg.src = current.cover;
+        heroCoverImg.alt = current.title + ' — ' + current.label + ' cover';
+      }
+      // Hero secondary CTA — "Open the latest issue"
+      var heroSecondary = document.querySelector('.hero-cta-row .cta-btn.secondary');
+      if (heroSecondary) heroSecondary.href = 'read.html?issue=' + encodeURIComponent(current.id);
+
+      // Topbar Issues dropdown
+      var dropdownMenu = document.getElementById('issuesNavMenu');
+      if (dropdownMenu) {
+        dropdownMenu.innerHTML = issues.map(function(it) {
+          return '<a class="nav-issue" href="read.html?issue=' + encodeURIComponent(it.id) + '">' +
+            '<img src="' + escHtml(it.cover) + '" alt="" />' +
+            '<div class="nav-issue-meta">' +
+              '<div class="nav-issue-label">' + escHtml(it.label) + '</div>' +
+              '<div class="nav-issue-name">' + escHtml(it.title) + '</div>' +
+            '</div></a>';
+        }).join('');
+      }
+      // Picker modal grid
+      var pickerGrid = document.querySelector('.picker-modal-grid');
+      if (pickerGrid) {
+        pickerGrid.innerHTML = issues.map(function(it) {
+          return '<a class="picker-card" href="read.html?issue=' + encodeURIComponent(it.id) + '">' +
+            '<div class="picker-card-cover">' +
+              '<img src="' + escHtml(it.cover) + '" alt="' + escHtml(it.label) + ' cover" />' +
+            '</div>' +
+            '<div class="picker-card-meta">' +
+              '<div class="picker-card-label">' + escHtml(it.label) + '</div>' +
+              '<div class="picker-card-name">' + escHtml(it.title) + '</div>' +
+            '</div></a>';
+        }).join('');
+      }
+      // Gallery grid
+      var galleryGrid = document.querySelector('.gallery-grid');
+      if (galleryGrid) {
+        galleryGrid.innerHTML = issues.map(function(it) {
+          var isCurrent = it.id === currentId;
+          return '<a class="gallery-card' + (isCurrent ? ' current' : '') + '" href="read.html?issue=' + encodeURIComponent(it.id) + '">' +
+            '<div class="gallery-card-cover" style="background-image:url(\'' + escHtml(it.cover) + '\');"></div>' +
+            '<div class="gallery-card-meta">' +
+              '<div>' +
+                '<div class="gallery-card-label">' + escHtml(it.label) + '</div>' +
+                '<div class="gallery-card-name">' + escHtml(it.title) + '</div>' +
+              '</div>' +
+              '<div class="gallery-card-cta">Read &rarr;</div>' +
+            '</div></a>';
+        }).join('');
+      }
+    }
+
+    fetch('content/issues.json', { cache: 'no-cache' })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject('not ok'); })
+      .then(renderIssueData)
+      .catch(function(err) {
+        console.warn('Could not load issues.json, using fallback:', err);
+        renderIssueData(FALLBACK_ISSUES_DATA);
+      });
+
     var modal = document.getElementById('aboutModal');
     function openAbout() { modal.classList.add('open'); document.body.style.overflow = 'hidden'; }
     function closeAbout() { modal.classList.remove('open'); document.body.style.overflow = ''; }

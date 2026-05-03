@@ -1,0 +1,2633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Read · Nocturne</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<meta name="theme-color" content="#161412" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,600;9..144,0,800;9..144,0,900;9..144,1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Flipbook + PDF rendering libraries -->
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f4efe6;
+    --paper-shadow: #d9d0bf;
+    --accent: #2b4a6f;
+    --accent-2: #2b4a6f;
+    --muted: #8a8275;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    background: radial-gradient(ellipse at top, #2a2622 0%, #161412 100%);
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    color: var(--paper);
+    overflow-x: hidden;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 32px;
+    border-bottom: 1px solid rgba(244,239,230,0.1);
+  }
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .masthead:hover { opacity: 0.85; }
+  .brand {
+    font-family: 'Archivo Black', sans-serif;
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    color: #f5c2d8;
+    text-transform: none;
+  }
+  .tagline {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: rgba(244,239,230,0.55);
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+  }
+  .nav { display: flex; gap: 24px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); align-items: center; }
+  .nav button { background: none; border: none; color: inherit; cursor: pointer; font: inherit; text-transform: inherit; letter-spacing: inherit; padding: 0; }
+  .nav button:hover { color: var(--paper); }
+
+  /* Download dropdown — pops out below the Download nav button.
+     Themed paper-on-dark to match the issues drawer aesthetic. */
+  .dl-wrap { position: relative; display: inline-block; }
+  .dl-wrap.open > #btn-download { color: var(--paper); }
+  .dl-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 60;
+    width: 240px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid rgba(26,26,26,0.18);
+    border-radius: 4px;
+    box-shadow:
+      0 12px 28px -8px rgba(0,0,0,0.45),
+      0 4px 10px -4px rgba(0,0,0,0.25);
+    overflow: hidden;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  /* Little notch pointing back at the trigger button */
+  .dl-menu::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 18px;
+    width: 10px;
+    height: 10px;
+    background: var(--paper);
+    border-left: 1px solid rgba(26,26,26,0.18);
+    border-top: 1px solid rgba(26,26,26,0.18);
+    transform: rotate(45deg);
+  }
+  .dl-wrap.open .dl-menu { display: block; }
+  .dl-list {
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px 0;
+    position: relative;
+  }
+  .dl-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    color: var(--ink);
+    transition: background 0.12s;
+  }
+  .dl-option:hover { background: rgba(43,74,111,0.1); }
+  .dl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid rgba(26,26,26,0.25);
+    flex: 0 0 auto;
+  }
+  .dl-option.current .dl-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(43,74,111,0.18);
+  }
+  .dl-name {
+    flex: 1;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .dl-current-tag {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 32px;
+    min-height: calc(100vh - 70px);
+  }
+
+  .issue-meta { text-align: center; margin-bottom: 20px; }
+  .issue-meta .label { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
+  .issue-meta h1 { font-family: 'Fraunces', serif; font-weight: 800; font-size: 28px; margin-top: 6px; }
+
+  /* Wrapper: lets us pin the FAB just below the magazine's bottom-right
+     corner without being clipped by .book-stage's overflow:hidden. */
+  .book-stage-wrap {
+    position: relative;
+    display: inline-block;
+    margin: 12px 0 24px; /* original spacing — controls sit on FAB's line */
+  }
+
+  .book-stage {
+    background: var(--paper);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.05),
+      0 30px 60px -20px rgba(0,0,0,0.5),
+      0 18px 36px -18px rgba(0,0,0,0.4);
+    position: relative;
+    transition: width 0.5s ease, background 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    background-image:
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.04) 100%),
+      linear-gradient(180deg, var(--paper) 0%, var(--paper-shadow) 100%);
+  }
+  .book-stage.cover-only,
+  .book-stage.back-only {
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+  }
+  .book-stage::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 24px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0,0,0,0.18) 45%,
+      rgba(0,0,0,0.25) 50%,
+      rgba(0,0,0,0.18) 55%,
+      transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .book-stage.portrait::after,
+  .book-stage.cover-only::after,
+  .book-stage.back-only::after { display: none; }
+
+  #flipbook {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    transition: left 0.5s ease;
+  }
+
+  /* PDF page (image inside flipbook) */
+  .pdf-page {
+    background: var(--paper);
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  .pdf-page img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    display: block;
+    /* Ask the browser for the best resampling quality available — matters
+       most when the rendered jpeg (sharp, ~2000px) is being downscaled to
+       the on-screen page size, or upscaled when the magazine is enlarged. */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: high-quality;
+  }
+  .pdf-page.spacer {
+    background: transparent !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden;
+  }
+
+  /* Loading state inside the book */
+  .book-loading {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    gap: 16px;
+  }
+  .book-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(244,239,230,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    max-width: 920px;
+    gap: 14px;
+  }
+  .controls-center {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-self: center;
+  }
+  .controls-side { display: flex; align-items: center; }
+  .controls-right { justify-content: flex-end; }
+  @media (max-width: 900px) {
+    .controls { grid-template-columns: auto; }
+    .controls-side { display: none; }
+  }
+  .ctrl-btn {
+    background: rgba(244,239,230,0.08); border: 1px solid rgba(244,239,230,0.2);
+    color: var(--paper); padding: 10px 18px; border-radius: 999px;
+    cursor: pointer; font-family: 'Inter', sans-serif; font-size: 11px;
+    letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.2s;
+  }
+  .ctrl-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .page-indicator {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    user-select: none;
+  }
+  .page-indicator:hover { color: var(--paper); background: rgba(244,239,230,0.06); }
+  .page-input {
+    width: 70px;
+    padding: 0 4px;
+    background: rgba(244,239,230,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .page-input::-webkit-outer-spin-button,
+  .page-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* Magnifier */
+  .magnifier-lens {
+    display: none;
+    position: fixed;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background-repeat: no-repeat;
+    background-color: var(--paper);
+    pointer-events: none;
+    z-index: 50;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.05);
+  }
+  .book-stage.magnify-active { cursor: zoom-in; }
+
+  /* Floating magnifier toggle — sits just BELOW the magazine's bottom-right
+     corner. .expanded → pill (auto-applied when the magazine is open).
+     .active → red accent (applied when the magnifier is on). */
+  .zoom-fab {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    /* Sits below the magazine's bottom-right corner, vertically centered
+       on the same line as the Prev / Indicator / Next controls. */
+    margin-top: 18px;
+    height: 44px;
+    width: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(0,0,0,0.55);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    transition:
+      width 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      padding 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      gap 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      border-radius 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      background 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.2s ease;
+  }
+  .zoom-fab:hover {
+    background: rgba(0,0,0,0.75);
+    transform: translateY(-1px);
+  }
+  .zoom-fab:active { transform: translateY(0); }
+  .zoom-fab-icon { font-size: 19px; line-height: 1; transition: font-size 0.3s; }
+  .zoom-fab-label {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    max-width: 0;
+    opacity: 0;
+    transition:
+      max-width 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 0.25s ease 0.15s;
+  }
+  /* Expanded: pill shape that extends leftward (triggered when magazine opens) */
+  .zoom-fab.expanded {
+    width: 122px;
+    border-radius: 999px;
+    padding: 0 18px;
+    gap: 8px;
+  }
+  .zoom-fab.expanded .zoom-fab-icon { font-size: 16px; }
+  .zoom-fab.expanded .zoom-fab-label { max-width: 90px; opacity: 1; }
+  /* Active: red accent (magnifier engaged) */
+  .zoom-fab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 8px 22px rgba(43,74,111,0.4);
+  }
+  .zoom-fab.active:hover { background: #1f3552; }
+
+  @media (max-width: 900px) {
+    /* Hover-magnifier doesn't make sense on touch — hide the FAB */
+    .zoom-fab { display: none; }
+  }
+
+  /* Enlarge FAB — mirror of the zoom FAB on the left side. Same circle→pill
+     animation, but anchored to the magazine's bottom-left corner so it grows
+     rightward when the magazine opens. */
+  .enlarge-fab {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 18px;
+    height: 44px;
+    width: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(0,0,0,0.55);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    transition:
+      width 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      padding 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      gap 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      border-radius 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      background 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.2s ease;
+  }
+  .enlarge-fab:hover {
+    background: rgba(0,0,0,0.75);
+    transform: translateY(-1px);
+  }
+  .enlarge-fab:active { transform: translateY(0); }
+  .enlarge-fab-icon { font-size: 19px; line-height: 1; transition: font-size 0.3s; }
+  .enlarge-fab-label {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    max-width: 0;
+    opacity: 0;
+    transition:
+      max-width 0.55s cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 0.25s ease 0.15s;
+  }
+  /* Expanded: pill that extends rightward (triggered when magazine opens) */
+  .enlarge-fab.expanded {
+    width: 138px;
+    border-radius: 999px;
+    padding: 0 18px;
+    gap: 8px;
+  }
+  .enlarge-fab.expanded .enlarge-fab-icon { font-size: 16px; }
+  .enlarge-fab.expanded .enlarge-fab-label { max-width: 110px; opacity: 1; }
+  /* Active: red accent when the magazine is enlarged */
+  .enlarge-fab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 8px 22px rgba(43,74,111,0.4);
+  }
+  .enlarge-fab.active:hover { background: #1f3552; }
+
+  @media (max-width: 900px) {
+    .enlarge-fab { display: none; }
+  }
+
+  /* Whole magazine scales up when .enlarged is on. We use the CSS `zoom`
+     property (not `transform: scale`) because zoom triggers an actual
+     layout resize — the browser re-rasterizes page images from their
+     source jpegs at the new display size, keeping text crisp. Transform
+     would stretch the already-rasterized bitmap and look blurry. */
+  .book-stage-wrap.enlarged {
+    zoom: 1.35;
+  }
+
+  /* Issues drawer */
+  .issues-drawer { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .issues-drawer.open { display: flex; }
+  .issues-grid { background: var(--paper); color: var(--ink); padding: 32px; border-radius: 4px; width: min(820px, 95vw); max-height: 85vh; overflow-y: auto; position: relative; }
+  .issues-grid h3 { font-family: 'Fraunces', serif; font-size: 24px; margin-bottom: 6px; }
+  .issues-grid .sub { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 22px; }
+  .issues-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+  .issue-card {
+    aspect-ratio: 3/4;
+    cursor: pointer;
+    transition: transform 0.2s;
+    overflow: hidden;
+    position: relative;
+    background: #2b4a6f;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .issue-card:hover { transform: translateY(-4px); }
+  .issue-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .issue-card .label-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    color: white;
+    padding: 16px 12px 10px;
+  }
+  .issue-card .label-overlay .num { font-size: 9px; letter-spacing: 0.25em; opacity: 0.8; text-transform: uppercase; }
+  .issue-card .label-overlay .name { font-family: 'Fraunces', serif; font-weight: 700; font-size: 14px; line-height: 1.2; margin-top: 2px; }
+  .issue-card.placeholder {
+    background: linear-gradient(135deg, #2b4a6f 0%, #142640 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 14px;
+  }
+  .issue-card.placeholder .num { font-size: 9px; letter-spacing: 0.25em; opacity: 0.85; }
+  .issue-card.placeholder .name { font-family: 'Fraunces', serif; font-weight: 800; font-size: 16px; line-height: 1; }
+  .close-x { position: absolute; top: 20px; right: 24px; background: none; border: none; color: var(--ink); font-size: 22px; cursor: pointer; }
+
+  /* Subscribe drawer (mini form) */
+  .subscribe-grid { width: min(440px, 95vw); }
+  .subscribe-mini-form { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+  .subscribe-mini-form input[type="email"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(26,26,26,0.18);
+    border-radius: 3px;
+    background: #fbf7ee;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+  }
+  .subscribe-mini-form input[type="email"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(43,74,111,0.15);
+  }
+
+  /* Join Us form */
+  .join-grid { width: min(520px, 95vw); }
+  .join-form { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
+  .join-form .field { display: flex; flex-direction: column; gap: 6px; }
+  .join-form .field-label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .join-form input[type="text"],
+  .join-form input[type="email"],
+  .join-form input[type="tel"],
+  .join-form select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(26,26,26,0.18);
+    border-radius: 3px;
+    background: #fbf7ee;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .join-form input:focus,
+  .join-form select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(43,74,111,0.15);
+  }
+  /* Phone: country-code dropdown + number input side-by-side */
+  .join-form .phone-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .join-form .phone-row input[type="tel"] {
+    flex: 1 1 auto;
+    width: auto;
+  }
+  /* Custom country-code dropdown — matches the form's paper aesthetic.
+     Replaces the native <select> so we can show flag emojis and theme it. */
+  .phone-code {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .phone-code-trigger {
+    height: 100%;
+    min-width: 122px;
+    padding: 12px 14px;
+    border: 1px solid rgba(26,26,26,0.18);
+    border-radius: 3px;
+    background: #fbf7ee;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .phone-code-trigger:hover { background: #f5efe1; }
+  .phone-code-trigger:focus,
+  .phone-code.open .phone-code-trigger {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(43,74,111,0.15);
+  }
+  .pc-flag {
+    font-size: 18px;
+    line-height: 1;
+    /* Slight nudge: most flag glyphs sit a hair high vs. baseline */
+    transform: translateY(-1px);
+  }
+  .pc-code { font-variant-numeric: tabular-nums; }
+  .pc-caret {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+    transition: transform 0.2s ease;
+  }
+  .phone-code.open .pc-caret { transform: rotate(180deg); }
+
+  .phone-code-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    width: 280px;
+    max-width: calc(95vw - 40px);
+    background: var(--paper);
+    border: 1px solid rgba(26,26,26,0.18);
+    border-radius: 4px;
+    box-shadow:
+      0 12px 28px -8px rgba(0,0,0,0.35),
+      0 4px 10px -4px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+  .phone-code.open .phone-code-menu { display: block; }
+  .pc-search {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid rgba(26,26,26,0.12);
+    background: #fbf7ee;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .pc-search::placeholder { color: var(--muted); }
+  .pc-list {
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+    /* Slim scrollbar tinted to the paper palette */
+    scrollbar-width: thin;
+    scrollbar-color: var(--paper-shadow) transparent;
+  }
+  .pc-list::-webkit-scrollbar { width: 8px; }
+  .pc-list::-webkit-scrollbar-thumb {
+    background: var(--paper-shadow);
+    border-radius: 4px;
+  }
+  .pc-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .pc-option:hover,
+  .pc-option.focused { background: rgba(43,74,111,0.1); }
+  .pc-option.selected { background: var(--accent); color: var(--paper); }
+  .pc-option.selected:hover { background: #1f3552; }
+  .pc-option .pc-name { flex: 1; }
+  .pc-option .pc-dial {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .pc-option.selected .pc-dial { color: rgba(255,255,255,0.85); }
+  .pc-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .join-form select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+      linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 36px;
+  }
+  .join-form .check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    user-select: none;
+  }
+  .join-form .check-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .join-form .form-error {
+    color: var(--accent);
+    font-size: 12px;
+    min-height: 0;
+  }
+  .join-form .form-error:not(:empty) {
+    min-height: 16px;
+    margin-top: -6px;
+  }
+  .join-submit {
+    margin-top: 6px;
+    padding: 13px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 999px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .join-submit:hover { background: var(--accent); }
+
+  .join-thanks {
+    text-align: center;
+    padding: 28px 8px 12px;
+    color: var(--ink);
+  }
+  .join-thanks .thanks-mark {
+    width: 56px;
+    height: 56px;
+    line-height: 56px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .join-thanks h4 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .join-thanks p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* About */
+  .about-grid { width: min(620px, 95vw); }
+  .about-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .about-grid h3 { margin-bottom: 22px; }
+  .about-body {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .about-body p { margin-bottom: 16px; }
+  .about-body p:last-child { margin-bottom: 0; }
+  .about-body em {
+    font-style: italic;
+    color: #4a3f30;
+  }
+  .about-body strong {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  /* Inline link inside the About copy — looks like the bold accent strong
+     it replaced, but is clickable and opens the Join Us drawer. */
+  .about-body .about-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .about-body .about-link:hover,
+  .about-body .about-link:focus-visible {
+    border-bottom-color: var(--accent);
+    color: #1f3552;
+    outline: none;
+  }
+  .about-take-tour {
+    margin-top: 22px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* -------------------- Onboarding tour -------------------- */
+  /* Dim everything that isn't the highlighted target. The dim and the
+     highlight ring use a single big box-shadow trick: the ring's giant
+     spread shadow IS the dim layer, and the ring itself is the cutout. */
+  .tour-root {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .tour-root.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* A separate fallback dim layer for the welcome step (no target) */
+  .tour-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    transition: opacity 0.25s ease;
+  }
+  .tour-root.has-target .tour-dim { opacity: 0; }
+
+  .tour-highlight {
+    position: fixed;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow:
+      0 0 0 9999px rgba(0,0,0,0.55),
+      0 0 0 2px var(--accent),
+      0 0 28px 4px rgba(43,74,111,0.55);
+    transition:
+      top 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      left 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      width 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      height 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 0.25s ease;
+    opacity: 0;
+  }
+  .tour-root.has-target .tour-highlight { opacity: 1; }
+
+  .tour-popup {
+    position: fixed;
+    width: min(320px, calc(100vw - 32px));
+    background: var(--accent);
+    color: #fff;
+    border-radius: 6px;
+    padding: 18px 20px 14px;
+    font-family: 'Inter', sans-serif;
+    box-shadow:
+      0 12px 32px rgba(0,0,0,0.45),
+      0 4px 10px rgba(0,0,0,0.25);
+    transition:
+      top 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      left 0.4s cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 0.25s ease;
+    opacity: 0;
+  }
+  .tour-root.active .tour-popup { opacity: 1; }
+  .tour-popup-arrow {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    transform: rotate(45deg);
+    /* Slides horizontally to track whichever button the tour is pointing at,
+       in sync with the popup's own slide between steps. */
+    transition: left 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .tour-popup[data-side="bottom"] .tour-popup-arrow { top: -6px; }
+  .tour-popup[data-side="top"]    .tour-popup-arrow { bottom: -6px; }
+  .tour-popup[data-side="center"] .tour-popup-arrow { display: none; }
+
+  .tour-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+  .tour-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 19px;
+    margin: 0 0 6px;
+    line-height: 1.2;
+  }
+  .tour-body {
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 0 14px;
+    opacity: 0.95;
+  }
+  .tour-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .tour-actions-right { display: flex; gap: 8px; }
+  .tour-skip,
+  .tour-back,
+  .tour-next {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 8px 14px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .tour-skip {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    padding-left: 0;
+  }
+  .tour-skip:hover { color: #fff; }
+  .tour-back,
+  .tour-next {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+  }
+  .tour-back:hover,
+  .tour-next:hover {
+    background: rgba(255,255,255,0.22);
+    border-color: rgba(255,255,255,0.45);
+  }
+  .tour-back[disabled] {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .tour-next.is-final {
+    background: #fff;
+    color: var(--accent);
+    border-color: #fff;
+    font-weight: 700;
+  }
+  .tour-next.is-final:hover { background: #f4efe6; }
+
+  /* Initial loading screen */
+  .app-loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at top, #2a2622 0%, #161412 100%);
+    z-index: 200;
+    gap: 20px;
+    transition: opacity 0.4s ease;
+  }
+  .app-loading.hidden { opacity: 0; pointer-events: none; }
+  .app-loading .text {
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+  }
+  .app-loading .progress {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .error-box {
+    margin: 40px auto;
+    padding: 20px;
+    max-width: 500px;
+    background: rgba(43,74,111,0.15);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-loading" id="appLoading">
+  <div class="spinner" style="width:48px; height:48px; border:3px solid rgba(244,239,230,0.15); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+  <div class="text">Loading magazine…</div>
+  <div class="progress" id="loadProgress">Preparing pages</div>
+</div>
+
+<header class="topbar">
+  <a class="masthead" href="index.html" aria-label="Back to home">
+    <div class="brand">Nocturne</div>
+    <div class="tagline">For the things that keep you up.</div>
+  </a>
+  <nav class="nav">
+    <button id="btn-issues">Issues</button>
+    <div class="dl-wrap" id="dlWrap">
+      <button id="btn-download" aria-haspopup="menu" aria-expanded="false" title="Download an issue as PDF">Download</button>
+      <div class="dl-menu" id="dlMenu" role="menu" aria-label="Download issues">
+        <div class="dl-list" id="dlList"></div>
+      </div>
+    </div>
+    <button id="btn-subscribe">Subscribe</button>
+    <button id="btn-join">Join Us</button>
+    <button id="btn-about">About</button>
+  </nav>
+</header>
+
+<main>
+  <div class="issue-meta">
+    <div class="label" id="issueLabel">&nbsp;</div>
+    <h1 id="issueTitle">&nbsp;</h1>
+  </div>
+
+  <!-- Wrapper holds the magazine and the FABs; FABs sit just below the
+       magazine's bottom corners so they don't get clipped. -->
+  <div class="book-stage-wrap" id="bookStageWrap">
+    <div class="book-stage" id="bookStage">
+      <div id="flipbook"></div>
+    </div>
+    <!-- Enlarge toggle. Mirror of the zoom FAB on the left side: circle
+         under the cover's left corner when closed, slides rightward and
+         extends into a pill when the magazine opens. -->
+    <button class="enlarge-fab" id="btn-enlarge" title="Enlarge magazine" aria-label="Enlarge magazine">
+      <span class="enlarge-fab-icon">&#9974;</span>
+      <span class="enlarge-fab-label">Enlarge</span>
+    </button>
+    <!-- Magnifier toggle. Circle under the cover's corner when closed,
+         auto-extends into a pill when the magazine opens. -->
+    <button class="zoom-fab" id="btn-zoom" title="Toggle magnifier" aria-label="Toggle magnifier">
+      <span class="zoom-fab-icon">&#x2315;</span>
+      <span class="zoom-fab-label">Zoom</span>
+    </button>
+  </div>
+
+  <div class="controls">
+    <div class="controls-side"></div>
+    <div class="controls-center">
+      <button class="ctrl-btn" id="prev">&larr; Prev</button>
+      <div class="page-indicator" id="indicator" title="Click to jump to a page">— / —</div>
+      <button class="ctrl-btn" id="next">Next &rarr;</button>
+    </div>
+    <div class="controls-side controls-right"></div>
+  </div>
+
+  <!-- Magnifier lens (positioned with JS, rendered above everything) -->
+  <div class="magnifier-lens" id="magnifierLens" aria-hidden="true"></div>
+
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+</main>
+
+<div class="issues-drawer" id="issuesDrawer">
+  <div class="issues-grid">
+    <button class="close-x" id="closeIssues">&times;</button>
+    <h3>All Issues</h3>
+    <div class="sub">Tap an issue to read</div>
+    <div class="issues-list" id="issuesList"></div>
+  </div>
+</div>
+
+<!-- Join Us drawer -->
+<div class="issues-drawer" id="joinDrawer">
+  <div class="issues-grid join-grid">
+    <button class="close-x" id="closeJoin">&times;</button>
+    <h3>Join Nocturne</h3>
+    <div class="sub">Tell us about yourself</div>
+
+    <form id="joinForm" class="join-form" novalidate>
+      <label class="field">
+        <span class="field-label">Name</span>
+        <input type="text" id="joinName" name="name" autocomplete="name" required />
+      </label>
+
+      <label class="field">
+        <span class="field-label">Email</span>
+        <input type="email" id="joinEmail" name="email" autocomplete="email" required />
+      </label>
+
+      <div class="field">
+        <span class="field-label">Phone</span>
+        <div class="phone-row">
+          <div class="phone-code" id="phoneCodeWrap">
+            <button type="button" class="phone-code-trigger" id="phoneCodeTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="pc-flag" id="pcFlag">&#127481;&#127479;</span>
+              <span class="pc-code" id="pcCode">+90</span>
+              <span class="pc-caret" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="phone-code-menu" id="phoneCodeMenu" role="listbox" aria-label="Country code">
+              <input type="text" class="pc-search" id="pcSearch" placeholder="Search country" autocomplete="off" />
+              <div class="pc-list" id="pcList"></div>
+            </div>
+            <input type="hidden" id="joinPhoneCode" name="phoneCode" value="+90" />
+          </div>
+          <input type="tel" id="joinPhone" name="phone" autocomplete="tel-national" placeholder="555 123 4567" required />
+        </div>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" id="joinIsAci" name="isAci" required />
+        <span>I'm an ACI student</span>
+      </label>
+
+      <label class="field" id="joinClassField">
+        <span class="field-label">Class</span>
+        <select id="joinClass" name="class" required>
+          <option value="">Select your class</option>
+          <option value="Prep">Prep</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
+      </label>
+
+      <div class="form-error" id="joinError"></div>
+      <button type="submit" class="join-submit">Send</button>
+    </form>
+
+    <div class="join-thanks" id="joinThanks" style="display:none;">
+      <div class="thanks-mark">✓</div>
+      <h4>Thanks for reaching out!</h4>
+      <p>We'll be in touch soon.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Subscribe drawer — small email-capture popup. POSTs to '/' with
+     form-name=subscribe so Netlify Forms (registered via the landing
+     page's static form) accepts the submission. -->
+<div class="issues-drawer" id="subscribeDrawer">
+  <div class="issues-grid subscribe-grid">
+    <button class="close-x" id="closeSubscribe">&times;</button>
+    <h3>Subscribe</h3>
+    <div class="sub">A quick email when we publish a new issue. No other mail, ever.</div>
+
+    <form id="subscribeForm" class="subscribe-mini-form" novalidate>
+      <input type="email" id="subscribeEmail" name="email" placeholder="you@example.com" autocomplete="email" required />
+      <div class="form-error" id="subscribeError"></div>
+      <button type="submit" class="join-submit">Subscribe</button>
+    </form>
+
+    <div class="join-thanks" id="subscribeThanks" style="display:none;">
+      <div class="thanks-mark">✓</div>
+      <h4>You're on the list!</h4>
+      <p>We'll be in touch when the next issue drops.</p>
+    </div>
+  </div>
+</div>
+
+<!-- About drawer -->
+<div class="issues-drawer" id="aboutDrawer">
+  <div class="issues-grid about-grid">
+    <button class="close-x" id="closeAbout">&times;</button>
+    <div class="about-eyebrow">A note from the editors</div>
+    <h3>About Nocturne</h3>
+
+    <div class="about-body">
+      <p>Nocturne is a student-run magazine out of <em>Özel İzmir Amerikan Koleji</em>.</p>
+
+      <p>We write about whatever we can't stop thinking about &mdash; films and music we keep coming back to, books we won't shut up about, the strange small things about growing up in İzmir, the people who made the work we love. Mostly the stuff that keeps us up.</p>
+
+      <p>Two issues in. Run by students, for students, with an editorial standard somewhere between <em>broadsheet</em> and <em>group chat</em>. We publish when we have something worth saying, and we'd rather be quiet than dilute it.</p>
+
+      <p>If you've got something to say &mdash; a piece, a photograph, an interview, an axe to grind &mdash; the <button type="button" class="about-link" id="aboutJoinLink">Join Us</button> tab is right there. We're always reading.</p>
+
+      <p class="about-take-tour"><button type="button" class="about-link" id="aboutTakeTour">Take a tour</button> of the controls.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding tour: dimming layer + highlight ring + accent popup. -->
+<div class="tour-root" id="tourRoot" aria-hidden="true">
+  <div class="tour-dim"     id="tourDim"></div>
+  <div class="tour-highlight" id="tourHighlight"></div>
+  <div class="tour-popup"   id="tourPopup" role="dialog" aria-modal="true">
+    <div class="tour-popup-arrow" id="tourArrow"></div>
+    <div class="tour-eyebrow"><span id="tourStepNum">1</span> / <span id="tourStepTotal">6</span></div>
+    <h4 class="tour-title" id="tourTitle">&nbsp;</h4>
+    <p class="tour-body" id="tourBody">&nbsp;</p>
+    <div class="tour-actions">
+      <button type="button" class="tour-skip" id="tourSkip">Skip tour</button>
+      <div class="tour-actions-right">
+        <button type="button" class="tour-back" id="tourBack">Back</button>
+        <button type="button" class="tour-next" id="tourNext">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===========================================================================
+  // ADD NEW ISSUES HERE
+  // ---------------------------------------------------------------------------
+  // To add a new issue:
+  //   1. Put the PDF in the same folder as this HTML file (or anywhere reachable)
+  //   2. Add an entry to the array below with:
+  //      - id:    a short unique name
+  //      - label: small caption ("ISSUE 04 · APRIL 2026")
+  //      - title: big title ("The Spring Edition")
+  //      - file:  path to the PDF, relative to this HTML file
+  // ===========================================================================
+  var ISSUES = [
+    {
+      id: 'nocturne-2025',
+      label: 'Issue 02 · 2025',
+      title: 'Nocturne',
+      file: 'nocturne2_final12.pdf',
+      cover: 'covers/nocturne-2025.jpg'
+    },
+    {
+      id: 'nocturne-2024',
+      label: 'Issue 01 · 2024',
+      title: 'Nocturne',
+      file: 'Nocturne.pdf',
+      cover: 'covers/nocturne-2024.jpg'
+    }
+  ];
+  // ===========================================================================
+
+  // Configure PDF.js worker
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  }
+
+  // Cache PDF page images per issue so we don't re-render on issue switch
+  var issueCache = {};   // { issueId: [imgUrl, imgUrl, ...] }
+  var pageFlip = null;
+  var currentIssue = null;
+  // Bridge set by init() so module-level functions (e.g. loadIssue) can
+  // reset the enlarge state when needed.
+  var resetEnlargeFromOutside = function() {};
+
+  // Tour bridge: when the user lands here via ?open=issues from the landing
+  // page, we don't want the onboarding tour to start until they actually
+  // pick an issue from the drawer (otherwise the tour fires while the
+  // drawer is still up and the user hasn't engaged yet). buildIssuesList's
+  // card click handler calls fireDeferredTour() — init() supplies the
+  // implementation that actually starts the tour, gated on first-visit.
+  var deferTourUntilIssueSelect = false;
+  var fireDeferredTour = function() {};
+
+  // Global error handler so we don't end up with a blank page
+  window.addEventListener('error', function(ev) {
+    showError(ev.message || ev.error || 'Unknown error');
+  });
+  window.addEventListener('unhandledrejection', function(ev) {
+    var msg = ev.reason && (ev.reason.message || ev.reason.toString()) || 'Unknown error';
+    showError(msg);
+  });
+
+  function showError(msg) {
+    var box = document.getElementById('errorBox');
+    if (box) {
+      box.style.display = 'block';
+      var hint = '';
+      var s = String(msg).toLowerCase();
+      if (s.indexOf('cors') !== -1 || s.indexOf('cross-origin') !== -1 ||
+          s.indexOf('failed to fetch') !== -1 || s.indexOf('network') !== -1 ||
+          s.indexOf('file://') !== -1) {
+        hint = '<br/><br/><strong>Likely cause:</strong> the browser is blocking the PDF because you opened the HTML file directly. ' +
+               'You need to run a local web server. On Mac, open Terminal in the folder with this file and run:<br/>' +
+               '<code style="display:block; padding:8px; background:rgba(0,0,0,0.3); margin-top:8px;">python3 -m http.server 8000</code>' +
+               'Then open <code>http://localhost:8000/magazine.html</code> in your browser.';
+      }
+      box.innerHTML = '<strong>Error:</strong> ' + msg + hint;
+    }
+    var loading = document.getElementById('appLoading');
+    if (loading) loading.classList.add('hidden');
+  }
+
+  // -------------------- Sizing --------------------
+  function computeSize(aspect) {
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var availableHeight = Math.max(vh - 240, 320);
+    var availableWidth = Math.max(vw - 32, 280);
+    var portrait = vw < 900;
+    if (!aspect) aspect = 3 / 4;
+    // aspect = width/height of a single page
+    // We need: pageHeight = pageWidth / aspect
+
+    var pageWidth, pageHeight;
+    if (portrait) {
+      pageWidth = Math.min(availableWidth, 420);
+      pageHeight = pageWidth / aspect;
+      if (pageHeight > availableHeight) {
+        pageHeight = availableHeight;
+        pageWidth = pageHeight * aspect;
+      }
+    } else {
+      pageWidth = Math.min(availableWidth / 2, 460);
+      pageHeight = pageWidth / aspect;
+      if (pageHeight > availableHeight) {
+        pageHeight = availableHeight;
+        pageWidth = pageHeight * aspect;
+      }
+    }
+    return {
+      pageWidth: Math.floor(pageWidth),
+      pageHeight: Math.floor(pageHeight),
+      portrait: portrait
+    };
+  }
+
+  // -------------------- PDF rendering --------------------
+  // Render every page of a PDF as a PNG data URL.
+  // Returns { images: [...], aspect: width/height }
+  function renderPdfToImages(url, onProgress) {
+    return pdfjsLib.getDocument(url).promise.then(function(pdf) {
+      var images = [];      // display-sized JPEGs (used for in-page rendering)
+      var zoomImages = [];  // hi-res JPEGs (used for the magnifier)
+      var total = pdf.numPages;
+      var pageAspect = 3 / 4; // fallback
+
+      // Two render scales:
+      //   ZOOM_SCALE   — hi-res, sized so the magnifier samples ~1:1 from
+      //                  this source. Anything coarser and the lens looks
+      //                  soft; anything finer wastes memory.
+      //   DISPLAY_SCALE — sized to the page's actual on-screen footprint
+      //                   (with a small headroom for enlarge mode), so the
+      //                   browser barely has to downsample at all when it
+      //                   paints the in-page <img>. This is the trick that
+      //                   closes the sharpness gap with the magnifier.
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var ZOOM_SCALE    = 4.0;            // ~2380 px wide for A4
+      var DISPLAY_SCALE = 1.6 * dpr;      // dpr=1 → 1.6 (~950 px); dpr=2 → 3.2 (~1900 px)
+      if (DISPLAY_SCALE < 2.0) DISPLAY_SCALE = 2.0;
+      if (DISPLAY_SCALE > ZOOM_SCALE) DISPLAY_SCALE = ZOOM_SCALE;
+
+      function renderPage(pageNum) {
+        return pdf.getPage(pageNum).then(function(page) {
+          // 1) Render at HI scale into a canvas (single PDF.js render pass).
+          var hiViewport = page.getViewport({ scale: ZOOM_SCALE });
+          if (pageNum === 1) {
+            pageAspect = hiViewport.width / hiViewport.height;
+          }
+          var hiCanvas = document.createElement('canvas');
+          hiCanvas.width = hiViewport.width;
+          hiCanvas.height = hiViewport.height;
+          var hiCtx = hiCanvas.getContext('2d');
+          return page.render({
+            canvasContext: hiCtx,
+            viewport: hiViewport,
+            intent: 'print'  // highest-quality rendering path
+          }).promise.then(function() {
+            // Hi-res JPEG — feeds the magnifier (lens shows at near-1:1
+            // device pixels, so it looks pixel-sharp).
+            zoomImages[pageNum - 1] = hiCanvas.toDataURL('image/jpeg', 0.92);
+
+            // 2) Down-sample on a second canvas to produce the display JPEG.
+            //    Done here (in JS) instead of leaving it to the browser at
+            //    paint time, because we can pick high-quality smoothing
+            //    explicitly and the result is one cleanly-pre-scaled JPEG.
+            var dRatio = DISPLAY_SCALE / ZOOM_SCALE;
+            var dW = Math.max(1, Math.round(hiCanvas.width * dRatio));
+            var dH = Math.max(1, Math.round(hiCanvas.height * dRatio));
+            var dCanvas = document.createElement('canvas');
+            dCanvas.width = dW;
+            dCanvas.height = dH;
+            var dCtx = dCanvas.getContext('2d');
+            dCtx.imageSmoothingEnabled = true;
+            dCtx.imageSmoothingQuality = 'high';
+            dCtx.drawImage(hiCanvas, 0, 0, dW, dH);
+            images[pageNum - 1] = dCanvas.toDataURL('image/jpeg', 0.95);
+
+            if (onProgress) onProgress(pageNum, total);
+          });
+        });
+      }
+
+      var chain = Promise.resolve();
+      for (var i = 1; i <= total; i++) {
+        (function(p) {
+          chain = chain.then(function() { return renderPage(p); });
+        })(i);
+      }
+      return chain.then(function() {
+        return { images: images, zoomImages: zoomImages, aspect: pageAspect };
+      });
+    });
+  }
+
+  // -------------------- Build flipbook for an issue --------------------
+  function loadIssue(issue) {
+    currentIssue = issue;
+    document.getElementById('issueLabel').textContent = issue.label;
+    document.getElementById('issueTitle').textContent = issue.title;
+    // Reset enlarge state on issue switch — page heights may differ between
+    // PDFs, and the cached margin compensation would be stale.
+    resetEnlargeFromOutside();
+
+    var loading = document.getElementById('appLoading');
+    var progressEl = document.getElementById('loadProgress');
+    loading.classList.remove('hidden');
+
+    var promise;
+    if (issueCache[issue.id]) {
+      promise = Promise.resolve(issueCache[issue.id]);
+      progressEl.textContent = 'Opening';
+    } else {
+      progressEl.textContent = 'Rendering page 1';
+      promise = renderPdfToImages(issue.file, function(done, total) {
+        progressEl.textContent = 'Rendering page ' + done + ' of ' + total;
+      }).then(function(result) {
+        issueCache[issue.id] = result;
+        return result;
+      });
+    }
+
+    return promise.then(function(data) {
+      buildBook(data.images, data.aspect);
+      setTimeout(function() {
+        loading.classList.add('hidden');
+      }, 200);
+    }).catch(function(err) {
+      progressEl.textContent = '';
+      var msg = (err && err.message) ? err.message : String(err);
+      showError('Couldn\'t load "' + issue.title + '" — ' + msg);
+    });
+  }
+
+  function buildBook(pdfImages, pdfAspect) {
+    if (typeof St === 'undefined' || !St.PageFlip) {
+      var box = document.getElementById('errorBox');
+      box.style.display = 'block';
+      box.innerHTML = '<strong>Flipbook library didn\'t load.</strong>';
+      return;
+    }
+
+    var sz = computeSize(pdfAspect || 3/4);
+    var bookStage = document.getElementById('bookStage');
+
+    if (pageFlip) {
+      try { pageFlip.destroy(); } catch (e) {}
+      pageFlip = null;
+    }
+
+    // Full reset: wipe everything inside bookStage so we get a clean slate
+    // (StPageFlip.destroy() may have detached the previous #flipbook or
+    // left wrapper elements behind). Then insert a fresh #flipbook.
+    while (bookStage.firstChild) bookStage.removeChild(bookStage.firstChild);
+    var flipbookEl = document.createElement('div');
+    flipbookEl.id = 'flipbook';
+    // Insert before the zoom FAB so the FAB stays on top in DOM order.
+    bookStage.insertBefore(flipbookEl, bookStage.firstChild);
+
+    bookStage.classList.remove('cover-only');
+    bookStage.classList.remove('back-only');
+
+    if (sz.portrait) bookStage.classList.add('portrait');
+    else bookStage.classList.remove('portrait');
+
+    bookStage.style.width = (sz.portrait ? sz.pageWidth : sz.pageWidth * 2) + 'px';
+    bookStage.style.height = sz.pageHeight + 'px';
+    bookStage.style.setProperty('--cover-shift', '-' + (sz.pageWidth / 2) + 'px');
+    bookStage.style.setProperty('--back-shift', (sz.pageWidth / 2) + 'px');
+
+    pageFlip = new St.PageFlip(flipbookEl, {
+      width: sz.pageWidth,
+      height: sz.pageHeight,
+      size: 'fixed',
+      drawShadow: true,
+      flippingTime: 800,
+      showCover: true,        // First and last pages render solo, centered
+      mobileScrollSupport: false,
+      usePortrait: sz.portrait,
+      maxShadowOpacity: 0.4,
+      autoSize: false
+    });
+
+    // Just feed the PDF page images straight in — no spacers.
+    // showCover:true tells the library to render first and last
+    // as solo "hard" pages, naturally centered.
+    pageFlip.loadFromImages(pdfImages);
+
+    function adjustStage() {
+      if (sz.portrait) return;
+      var current = pageFlip.getCurrentPageIndex();
+      var total = pageFlip.getPageCount();
+      var onCover = (current === 0);
+      var onBack  = (current === total - 1);
+
+      bookStage.classList.remove('cover-only');
+      bookStage.classList.remove('back-only');
+
+      if (onCover) {
+        // Stage shrinks to 1 page wide. Cover sits in flipbook's right slot.
+        // Position flipbook so its right slot aligns with the stage:
+        // flipbook left edge = -pageWidth (so right slot starts at stage's left=0)
+        bookStage.classList.add('cover-only');
+        bookStage.style.width = sz.pageWidth + 'px';
+        flipbookEl.style.left = (-sz.pageWidth) + 'px';
+      } else if (onBack) {
+        // Stage shrinks to 1 page wide. Back sits in flipbook's left slot.
+        // Position flipbook so its left slot aligns with the stage:
+        // flipbook left edge = 0
+        bookStage.classList.add('back-only');
+        bookStage.style.width = sz.pageWidth + 'px';
+        flipbookEl.style.left = '0px';
+      } else {
+        // Full 2-page spread: stage is 2 pages wide, flipbook fills it.
+        bookStage.style.width = (sz.pageWidth * 2) + 'px';
+        flipbookEl.style.left = '0px';
+      }
+
+      // FABs: circles when closed (cover or back), pills when open (spread).
+      var isOpen = !(onCover || onBack);
+      var zfab = document.getElementById('btn-zoom');
+      var efab = document.getElementById('btn-enlarge');
+      if (zfab) zfab.classList.toggle('expanded', isOpen);
+      if (efab) efab.classList.toggle('expanded', isOpen);
+    }
+
+    pageFlip.on('flip', function() {
+      updateIndicator();
+      adjustStage();
+    });
+    updateIndicator();
+    adjustStage();
+  }
+
+  function makePdfPageElement(imgUrl) {
+    var div = document.createElement('div');
+    div.className = 'pdf-page';
+    var img = document.createElement('img');
+    img.src = imgUrl;
+    img.draggable = false;
+    div.appendChild(img);
+    return div;
+  }
+
+  function makeSpacerElement() {
+    var div = document.createElement('div');
+    div.className = 'pdf-page spacer';
+    return div;
+  }
+
+  function updateIndicator() {
+    if (!pageFlip) return;
+    var ind = document.getElementById('indicator');
+    var current = pageFlip.getCurrentPageIndex() + 1;
+    var total = pageFlip.getPageCount();
+    ind.textContent = current + ' / ' + total;
+  }
+
+  // -------------------- Issues drawer --------------------
+  function buildIssuesList() {
+    var list = document.getElementById('issuesList');
+    list.innerHTML = '';
+    ISSUES.forEach(function(issue) {
+      var card = document.createElement('div');
+      card.className = 'issue-card';
+      card.onclick = function() {
+        document.getElementById('issuesDrawer').classList.remove('open');
+        // Helper that fires the deferred tour exactly once after this pick.
+        function maybeFireTour() {
+          if (deferTourUntilIssueSelect) {
+            deferTourUntilIssueSelect = false;
+            fireDeferredTour();
+          }
+        }
+        if (currentIssue && currentIssue.id === issue.id) {
+          // Same issue — no reload needed, just let the drawer close, then
+          // start the tour if we were waiting on a selection.
+          setTimeout(maybeFireTour, 250);
+          return;
+        }
+        loadIssue(issue).then(maybeFireTour);
+      };
+
+      // Prefer the static cover JPEG if the issue has one — that way every
+      // issue shows its real cover immediately, not a placeholder. Falls
+      // back to the live-rendered first page if the static cover isn't set,
+      // and finally to a colored text placeholder if neither is available.
+      var cached = issueCache[issue.id];
+      var coverUrl = issue.cover || (cached && cached.images && cached.images[0]);
+      if (coverUrl) {
+        var img = document.createElement('img');
+        img.src = coverUrl;
+        img.alt = issue.title + ' — ' + issue.label;
+        card.appendChild(img);
+        var overlay = document.createElement('div');
+        overlay.className = 'label-overlay';
+        overlay.innerHTML = '<div class="num">' + issue.label + '</div>' +
+                            '<div class="name">' + issue.title + '</div>';
+        card.appendChild(overlay);
+      } else {
+        card.classList.add('placeholder');
+        card.innerHTML = '<div class="num">' + issue.label + '</div>' +
+                         '<div class="name">' + issue.title + '</div>';
+      }
+      list.appendChild(card);
+    });
+  }
+
+  // -------------------- Init --------------------
+  function init() {
+    if (ISSUES.length === 0) {
+      var box = document.getElementById('errorBox');
+      box.style.display = 'block';
+      box.innerHTML = '<strong>No issues configured yet.</strong><br/>Edit the ISSUES array near the top of this file to add a magazine PDF.';
+      document.getElementById('appLoading').classList.add('hidden');
+      return;
+    }
+
+    buildIssuesList();
+
+    // Read deep-link params from the URL so the landing page can route here:
+    //   ?issue=<id>      → load that specific issue instead of the latest
+    //   ?open=issues     → SKIP initial render, pop the issues drawer first
+    //                      and only load once the user picks
+    //   ?open=join       → pop the Join Us drawer (after default issue loads)
+    //   ?open=about      → pop the About drawer (after default issue loads)
+    var urlParams = new URLSearchParams(window.location.search);
+    var initialIssue = ISSUES[0];
+    var requestedId = urlParams.get('issue');
+    if (requestedId) {
+      for (var k = 0; k < ISSUES.length; k++) {
+        if (ISSUES[k].id === requestedId) { initialIssue = ISSUES[k]; break; }
+      }
+    }
+    var openWhat = urlParams.get('open');
+    var openIssuesFirst = (openWhat === 'issues');
+
+    // ?open=issues means: skip the auto-render, ask the user which issue
+    // first. The cards in the drawer use static covers (issue.cover), so
+    // they appear instantly without any PDF render needed.
+    if (openIssuesFirst) deferTourUntilIssueSelect = true;
+
+    var firstLoadDone;
+    if (openIssuesFirst) {
+      // Hide the loading screen — nothing's rendering until the user picks.
+      document.getElementById('appLoading').classList.add('hidden');
+      firstLoadDone = Promise.resolve();
+      // Pop the issues drawer immediately so the visitor lands on the picker.
+      setTimeout(function() {
+        document.getElementById('btn-issues').click();
+      }, 60);
+    } else {
+      firstLoadDone = loadIssue(initialIssue).then(function() {
+        buildIssuesList();  // rebuild now that the first issue's cover is cached
+
+        // Honor ?open=join / ?open=about by clicking the matching nav button.
+        if (openWhat === 'join' || openWhat === 'about') {
+          setTimeout(function() {
+            var btn = (openWhat === 'join')
+              ? document.getElementById('btn-join')
+              : document.getElementById('btn-about');
+            if (btn) btn.click();
+          }, 80);
+        }
+      });
+    }
+
+    // Resize handler
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        if (currentIssue && issueCache[currentIssue.id]) {
+          var data = issueCache[currentIssue.id];
+          buildBook(data.images, data.aspect);
+        }
+      }, 200);
+    });
+
+    // Controls
+    document.getElementById('prev').onclick = function() { if (pageFlip) pageFlip.flipPrev(); };
+    document.getElementById('next').onclick = function() { if (pageFlip) pageFlip.flipNext(); };
+
+    // -------------------- Click-to-jump page indicator --------------------
+    // Click the "5 / 38" indicator → it becomes a number input.
+    // Type a page number, hit Enter to jump (Escape cancels).
+    var indicator = document.getElementById('indicator');
+    indicator.addEventListener('click', function() {
+      if (!pageFlip) return;
+      if (indicator.querySelector('input')) return; // Already editing
+
+      var current = pageFlip.getCurrentPageIndex() + 1;
+      var total = pageFlip.getPageCount();
+      var input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'page-input';
+      input.value = current;
+      input.min = 1;
+      input.max = total;
+
+      indicator.textContent = '';
+      indicator.appendChild(input);
+      input.focus();
+      input.select();
+
+      var done = false;
+      function commit() {
+        if (done) return; done = true;
+        var n = parseInt(input.value, 10);
+        if (!isNaN(n) && n >= 1 && n <= total && (n - 1) !== pageFlip.getCurrentPageIndex()) {
+          pageFlip.flip(n - 1);
+        }
+        updateIndicator();
+      }
+      function cancel() {
+        if (done) return; done = true;
+        updateIndicator();
+      }
+
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        // Don't let the global arrow-key handler flip pages while typing
+        e.stopPropagation();
+      });
+      input.addEventListener('blur', commit);
+    });
+
+    // -------------------- Magnifier (loupe) --------------------
+    // Toggle button enables a circular lens that follows the cursor and
+    // shows a 2.2x zoomed view of whatever PDF page is under it.
+    var lens = document.getElementById('magnifierLens');
+    var bookStageEl = document.getElementById('bookStage');
+    var btnZoom = document.getElementById('btn-zoom');
+    var magnifierEnabled = false;
+    var LENS_RADIUS = 120;     // half of CSS width/height
+    var ZOOM_FACTOR = 2.2;
+
+    function setMagnifier(enabled) {
+      magnifierEnabled = enabled;
+      btnZoom.classList.toggle('active', enabled);
+      bookStageEl.classList.toggle('magnify-active', enabled);
+      if (!enabled) lens.style.display = 'none';
+    }
+    btnZoom.addEventListener('click', function(e) { e.stopPropagation(); setMagnifier(!magnifierEnabled); });
+    btnZoom.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    btnZoom.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+
+    // -------------------- Enlarge (whole-magazine scale) --------------------
+    // Scales the magazine up so text is easier to read. Uses CSS `zoom`
+    // (not `transform: scale`) so the browser actually resizes layout
+    // and re-rasterizes page images from their source jpegs at the new
+    // display size — which keeps text sharp. Transform would stretch the
+    // already-rasterized bitmap and look blurry.
+    var btnEnlarge = document.getElementById('btn-enlarge');
+    var bookStageWrap = document.getElementById('bookStageWrap');
+    var enlargeEnabled = false;
+
+    function setEnlarged(enabled) {
+      enlargeEnabled = enabled;
+      btnEnlarge.classList.toggle('active', enabled);
+      bookStageWrap.classList.toggle('enlarged', enabled);
+      // Magnifier and enlarge don't combine cleanly — turn the loupe off.
+      if (enabled && magnifierEnabled) setMagnifier(false);
+    }
+    btnEnlarge.addEventListener('click', function(e) { e.stopPropagation(); setEnlarged(!enlargeEnabled); });
+    btnEnlarge.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    btnEnlarge.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+
+    // Expose reset to module scope so loadIssue() can clear it on switch.
+    resetEnlargeFromOutside = function() { if (enlargeEnabled) setEnlarged(false); };
+
+    // Given the cursor's x within the stage, figure out which PDF page
+    // image it's hovering over and the cursor's x relative to that page.
+    function getPageUnderCursor(xRelStage, stageWidth) {
+      if (!currentIssue) return null;
+      var data = issueCache[currentIssue.id];
+      if (!data || !data.images) return null;
+      // Magnifier samples from the hi-res zoomImages so the lens is sharp
+      // at near-1:1 device pixels. Falls back to display images if the
+      // hi-res variant isn't available (older cache entries).
+      var images = data.zoomImages || data.images;
+
+      if (bookStageEl.classList.contains('cover-only')) {
+        return { url: images[0], xOnPage: xRelStage, pageWidth: stageWidth };
+      }
+      if (bookStageEl.classList.contains('back-only')) {
+        return { url: images[images.length - 1], xOnPage: xRelStage, pageWidth: stageWidth };
+      }
+      // Two-page spread
+      var pageWidth = stageWidth / 2;
+      var leftIdx = pageFlip ? pageFlip.getCurrentPageIndex() : 0;
+      if (xRelStage < pageWidth) {
+        return { url: images[leftIdx], xOnPage: xRelStage, pageWidth: pageWidth };
+      }
+      return {
+        url: images[leftIdx + 1],
+        xOnPage: xRelStage - pageWidth,
+        pageWidth: pageWidth
+      };
+    }
+
+    document.addEventListener('mousemove', function(e) {
+      if (!magnifierEnabled) return;
+      var rect = bookStageEl.getBoundingClientRect();
+      var inStage = e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top  && e.clientY <= rect.bottom;
+      if (!inStage) { lens.style.display = 'none'; return; }
+
+      var xRelStage = e.clientX - rect.left;
+      var yRelStage = e.clientY - rect.top;
+      var info = getPageUnderCursor(xRelStage, rect.width);
+      if (!info || !info.url) { lens.style.display = 'none'; return; }
+
+      var bgW = info.pageWidth * ZOOM_FACTOR;
+      var bgH = rect.height * ZOOM_FACTOR;
+      var bgX = -(info.xOnPage * ZOOM_FACTOR - LENS_RADIUS);
+      var bgY = -(yRelStage     * ZOOM_FACTOR - LENS_RADIUS);
+
+      lens.style.display = 'block';
+      lens.style.left = (e.clientX - LENS_RADIUS) + 'px';
+      lens.style.top  = (e.clientY - LENS_RADIUS) + 'px';
+      lens.style.backgroundImage = 'url(' + info.url + ')';
+      lens.style.backgroundSize = bgW + 'px ' + bgH + 'px';
+      lens.style.backgroundPosition = bgX + 'px ' + bgY + 'px';
+    });
+
+    // Issues drawer
+    var drawer = document.getElementById('issuesDrawer');
+    document.getElementById('btn-issues').onclick = function() {
+      buildIssuesList();
+      drawer.classList.add('open');
+    };
+    document.getElementById('closeIssues').onclick = function() { drawer.classList.remove('open'); };
+    drawer.onclick = function(e) { if (e.target === drawer) drawer.classList.remove('open'); };
+
+    // -------------------- Download dropdown --------------------
+    // Click "Download" to open a menu listing every issue. Each row shows
+    // the issue label; the currently-viewed issue is marked with a filled
+    // accent dot and a small "Current" tag. Clicking a row triggers the
+    // browser's download flow on that issue's source PDF.
+    var dlWrap = document.getElementById('dlWrap');
+    var btnDownload = document.getElementById('btn-download');
+    var dlList = document.getElementById('dlList');
+
+    function downloadIssue(issue) {
+      var safe = function(s) { return String(s).replace(/[\\/:*?"<>|]/g, '-'); };
+      var fileName = safe(issue.title + ' — ' + issue.label) + '.pdf';
+      var a = document.createElement('a');
+      a.href = issue.file;
+      a.download = fileName;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function buildDownloadList() {
+      dlList.innerHTML = '';
+      ISSUES.forEach(function(issue) {
+        var isCurrent = currentIssue && currentIssue.id === issue.id;
+        var row = document.createElement('div');
+        row.className = 'dl-option' + (isCurrent ? ' current' : '');
+        row.setAttribute('role', 'menuitem');
+        row.innerHTML =
+          '<span class="dl-dot" aria-hidden="true"></span>' +
+          '<span class="dl-name"></span>' +
+          (isCurrent ? '<span class="dl-current-tag">Current</span>' : '');
+        row.querySelector('.dl-name').textContent = issue.label;
+        row.addEventListener('click', function() {
+          downloadIssue(issue);
+          closeDownloadMenu();
+        });
+        dlList.appendChild(row);
+      });
+    }
+
+    function openDownloadMenu() {
+      buildDownloadList();
+      dlWrap.classList.add('open');
+      btnDownload.setAttribute('aria-expanded', 'true');
+    }
+    function closeDownloadMenu() {
+      dlWrap.classList.remove('open');
+      btnDownload.setAttribute('aria-expanded', 'false');
+    }
+
+    btnDownload.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (dlWrap.classList.contains('open')) closeDownloadMenu();
+      else openDownloadMenu();
+    });
+
+    document.addEventListener('click', function(e) {
+      if (dlWrap.classList.contains('open') && !dlWrap.contains(e.target)) {
+        closeDownloadMenu();
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && dlWrap.classList.contains('open')) {
+        closeDownloadMenu();
+      }
+    });
+
+    // -------------------- Join Us drawer --------------------
+    // Submissions are sent through FormSubmit (https://formsubmit.co), a free
+    // service that forwards form data to an email address without needing a
+    // backend. NOTE: The first time the form is submitted, FormSubmit will
+    // send a one-time confirmation email to JOIN_RECIPIENT — click the link
+    // in that email to activate delivery. After that, every submission lands
+    // in the inbox directly.
+    var JOIN_RECIPIENT = 'nocturneaci@gmail.com';
+    var JOIN_ENDPOINT = 'https://formsubmit.co/ajax/' + JOIN_RECIPIENT;
+
+    var joinDrawer = document.getElementById('joinDrawer');
+    var joinForm = document.getElementById('joinForm');
+    var joinThanks = document.getElementById('joinThanks');
+    var joinError = document.getElementById('joinError');
+    var joinIsAci = document.getElementById('joinIsAci');
+    var joinClassField = document.getElementById('joinClassField');
+    var joinSubmitBtn = joinForm.querySelector('.join-submit');
+
+    // -------------------- Country-code dropdown --------------------
+    // Custom themed dropdown with flag emojis. Türkiye + United States are
+    // pinned to the top; the rest is sorted alphabetically by country name.
+    // The currently chosen value is mirrored into the hidden #joinPhoneCode
+    // input so the existing form-submit code keeps working unchanged.
+    var COUNTRIES = [
+      { name: 'Türkiye', code: '+90', flag: '🇹🇷' },
+      { name: 'United States', code: '+1', flag: '🇺🇸' },
+      { name: 'Afghanistan', code: '+93', flag: '🇦🇫' },
+      { name: 'Albania', code: '+355', flag: '🇦🇱' },
+      { name: 'Algeria', code: '+213', flag: '🇩🇿' },
+      { name: 'Argentina', code: '+54', flag: '🇦🇷' },
+      { name: 'Armenia', code: '+374', flag: '🇦🇲' },
+      { name: 'Australia', code: '+61', flag: '🇦🇺' },
+      { name: 'Austria', code: '+43', flag: '🇦🇹' },
+      { name: 'Azerbaijan', code: '+994', flag: '🇦🇿' },
+      { name: 'Bahrain', code: '+973', flag: '🇧🇭' },
+      { name: 'Bangladesh', code: '+880', flag: '🇧🇩' },
+      { name: 'Belarus', code: '+375', flag: '🇧🇾' },
+      { name: 'Belgium', code: '+32', flag: '🇧🇪' },
+      { name: 'Bosnia & Herzegovina', code: '+387', flag: '🇧🇦' },
+      { name: 'Brazil', code: '+55', flag: '🇧🇷' },
+      { name: 'Bulgaria', code: '+359', flag: '🇧🇬' },
+      { name: 'Canada', code: '+1', flag: '🇨🇦' },
+      { name: 'Chile', code: '+56', flag: '🇨🇱' },
+      { name: 'China', code: '+86', flag: '🇨🇳' },
+      { name: 'Colombia', code: '+57', flag: '🇨🇴' },
+      { name: 'Croatia', code: '+385', flag: '🇭🇷' },
+      { name: 'Cyprus', code: '+357', flag: '🇨🇾' },
+      { name: 'Czech Republic', code: '+420', flag: '🇨🇿' },
+      { name: 'Denmark', code: '+45', flag: '🇩🇰' },
+      { name: 'Egypt', code: '+20', flag: '🇪🇬' },
+      { name: 'Estonia', code: '+372', flag: '🇪🇪' },
+      { name: 'Finland', code: '+358', flag: '🇫🇮' },
+      { name: 'France', code: '+33', flag: '🇫🇷' },
+      { name: 'Georgia', code: '+995', flag: '🇬🇪' },
+      { name: 'Germany', code: '+49', flag: '🇩🇪' },
+      { name: 'Greece', code: '+30', flag: '🇬🇷' },
+      { name: 'Hong Kong', code: '+852', flag: '🇭🇰' },
+      { name: 'Hungary', code: '+36', flag: '🇭🇺' },
+      { name: 'Iceland', code: '+354', flag: '🇮🇸' },
+      { name: 'India', code: '+91', flag: '🇮🇳' },
+      { name: 'Indonesia', code: '+62', flag: '🇮🇩' },
+      { name: 'Iran', code: '+98', flag: '🇮🇷' },
+      { name: 'Iraq', code: '+964', flag: '🇮🇶' },
+      { name: 'Ireland', code: '+353', flag: '🇮🇪' },
+      { name: 'Israel', code: '+972', flag: '🇮🇱' },
+      { name: 'Italy', code: '+39', flag: '🇮🇹' },
+      { name: 'Japan', code: '+81', flag: '🇯🇵' },
+      { name: 'Jordan', code: '+962', flag: '🇯🇴' },
+      { name: 'Kazakhstan', code: '+7', flag: '🇰🇿' },
+      { name: 'Kenya', code: '+254', flag: '🇰🇪' },
+      { name: 'Kuwait', code: '+965', flag: '🇰🇼' },
+      { name: 'Kyrgyzstan', code: '+996', flag: '🇰🇬' },
+      { name: 'Latvia', code: '+371', flag: '🇱🇻' },
+      { name: 'Lebanon', code: '+961', flag: '🇱🇧' },
+      { name: 'Libya', code: '+218', flag: '🇱🇾' },
+      { name: 'Lithuania', code: '+370', flag: '🇱🇹' },
+      { name: 'Luxembourg', code: '+352', flag: '🇱🇺' },
+      { name: 'Malaysia', code: '+60', flag: '🇲🇾' },
+      { name: 'Malta', code: '+356', flag: '🇲🇹' },
+      { name: 'Mexico', code: '+52', flag: '🇲🇽' },
+      { name: 'Moldova', code: '+373', flag: '🇲🇩' },
+      { name: 'Morocco', code: '+212', flag: '🇲🇦' },
+      { name: 'Netherlands', code: '+31', flag: '🇳🇱' },
+      { name: 'New Zealand', code: '+64', flag: '🇳🇿' },
+      { name: 'Nigeria', code: '+234', flag: '🇳🇬' },
+      { name: 'Norway', code: '+47', flag: '🇳🇴' },
+      { name: 'Oman', code: '+968', flag: '🇴🇲' },
+      { name: 'Pakistan', code: '+92', flag: '🇵🇰' },
+      { name: 'Palestine', code: '+970', flag: '🇵🇸' },
+      { name: 'Peru', code: '+51', flag: '🇵🇪' },
+      { name: 'Philippines', code: '+63', flag: '🇵🇭' },
+      { name: 'Poland', code: '+48', flag: '🇵🇱' },
+      { name: 'Portugal', code: '+351', flag: '🇵🇹' },
+      { name: 'Qatar', code: '+974', flag: '🇶🇦' },
+      { name: 'Romania', code: '+40', flag: '🇷🇴' },
+      { name: 'Russia', code: '+7', flag: '🇷🇺' },
+      { name: 'Saudi Arabia', code: '+966', flag: '🇸🇦' },
+      { name: 'Serbia', code: '+381', flag: '🇷🇸' },
+      { name: 'Singapore', code: '+65', flag: '🇸🇬' },
+      { name: 'Slovakia', code: '+421', flag: '🇸🇰' },
+      { name: 'Slovenia', code: '+386', flag: '🇸🇮' },
+      { name: 'South Africa', code: '+27', flag: '🇿🇦' },
+      { name: 'South Korea', code: '+82', flag: '🇰🇷' },
+      { name: 'Spain', code: '+34', flag: '🇪🇸' },
+      { name: 'Sri Lanka', code: '+94', flag: '🇱🇰' },
+      { name: 'Sweden', code: '+46', flag: '🇸🇪' },
+      { name: 'Switzerland', code: '+41', flag: '🇨🇭' },
+      { name: 'Syria', code: '+963', flag: '🇸🇾' },
+      { name: 'Taiwan', code: '+886', flag: '🇹🇼' },
+      { name: 'Thailand', code: '+66', flag: '🇹🇭' },
+      { name: 'Tunisia', code: '+216', flag: '🇹🇳' },
+      { name: 'Turkmenistan', code: '+993', flag: '🇹🇲' },
+      { name: 'Ukraine', code: '+380', flag: '🇺🇦' },
+      { name: 'United Arab Emirates', code: '+971', flag: '🇦🇪' },
+      { name: 'United Kingdom', code: '+44', flag: '🇬🇧' },
+      { name: 'Uruguay', code: '+598', flag: '🇺🇾' },
+      { name: 'Uzbekistan', code: '+998', flag: '🇺🇿' },
+      { name: 'Venezuela', code: '+58', flag: '🇻🇪' },
+      { name: 'Vietnam', code: '+84', flag: '🇻🇳' },
+      { name: 'Yemen', code: '+967', flag: '🇾🇪' }
+    ];
+
+    var phoneCodeWrap = document.getElementById('phoneCodeWrap');
+    var phoneCodeTrigger = document.getElementById('phoneCodeTrigger');
+    var phoneCodeMenu = document.getElementById('phoneCodeMenu');
+    var pcSearch = document.getElementById('pcSearch');
+    var pcList = document.getElementById('pcList');
+    var pcFlag = document.getElementById('pcFlag');
+    var pcCode = document.getElementById('pcCode');
+    var phoneCodeInput = document.getElementById('joinPhoneCode');
+    var pcSelectedIdx = 0; // currently selected country index
+    var pcFocusedIdx = 0;  // keyboard-focused option
+
+    function pcSelect(i) {
+      pcSelectedIdx = i;
+      var c = COUNTRIES[i];
+      pcFlag.textContent = c.flag;
+      pcCode.textContent = c.code;
+      phoneCodeInput.value = c.code;
+    }
+
+    function pcRender(filter) {
+      filter = (filter || '').trim().toLowerCase();
+      pcList.innerHTML = '';
+      var any = false;
+      COUNTRIES.forEach(function(c, i) {
+        if (filter && c.name.toLowerCase().indexOf(filter) === -1
+                   && c.code.replace('+','').indexOf(filter.replace('+','')) === -1) {
+          return;
+        }
+        any = true;
+        var row = document.createElement('div');
+        row.className = 'pc-option' + (i === pcSelectedIdx ? ' selected' : '') + (i === pcFocusedIdx ? ' focused' : '');
+        row.setAttribute('role', 'option');
+        row.setAttribute('data-index', String(i));
+        row.innerHTML =
+          '<span class="pc-flag">' + c.flag + '</span>' +
+          '<span class="pc-name"></span>' +
+          '<span class="pc-dial"></span>';
+        row.querySelector('.pc-name').textContent = c.name;
+        row.querySelector('.pc-dial').textContent = c.code;
+        row.addEventListener('click', function() {
+          pcSelect(i);
+          pcClose();
+        });
+        row.addEventListener('mouseenter', function() {
+          pcFocusedIdx = i;
+          var prev = pcList.querySelector('.pc-option.focused');
+          if (prev) prev.classList.remove('focused');
+          row.classList.add('focused');
+        });
+        pcList.appendChild(row);
+      });
+      if (!any) {
+        var empty = document.createElement('div');
+        empty.className = 'pc-empty';
+        empty.textContent = 'No matches';
+        pcList.appendChild(empty);
+      }
+    }
+
+    function pcOpen() {
+      phoneCodeWrap.classList.add('open');
+      phoneCodeTrigger.setAttribute('aria-expanded', 'true');
+      pcSearch.value = '';
+      pcFocusedIdx = pcSelectedIdx;
+      pcRender('');
+      // Scroll the selected option into view
+      setTimeout(function() {
+        pcSearch.focus();
+        var sel = pcList.querySelector('.pc-option.selected');
+        if (sel) sel.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    }
+    function pcClose() {
+      phoneCodeWrap.classList.remove('open');
+      phoneCodeTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    phoneCodeTrigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (phoneCodeWrap.classList.contains('open')) pcClose();
+      else pcOpen();
+    });
+
+    pcSearch.addEventListener('input', function() {
+      pcRender(pcSearch.value);
+    });
+
+    pcSearch.addEventListener('keydown', function(e) {
+      var visible = Array.prototype.slice.call(pcList.querySelectorAll('.pc-option'));
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!visible.length) return;
+        var currentVisIdx = visible.findIndex(function(el) { return el.classList.contains('focused'); });
+        if (currentVisIdx < 0) currentVisIdx = 0;
+        var next = e.key === 'ArrowDown' ? Math.min(currentVisIdx + 1, visible.length - 1)
+                                         : Math.max(currentVisIdx - 1, 0);
+        visible.forEach(function(el) { el.classList.remove('focused'); });
+        visible[next].classList.add('focused');
+        pcFocusedIdx = parseInt(visible[next].getAttribute('data-index'), 10);
+        visible[next].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        var focused = pcList.querySelector('.pc-option.focused');
+        if (focused) {
+          pcSelect(parseInt(focused.getAttribute('data-index'), 10));
+          pcClose();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        pcClose();
+        phoneCodeTrigger.focus();
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (phoneCodeWrap.classList.contains('open')
+          && !phoneCodeWrap.contains(e.target)) {
+        pcClose();
+      }
+    });
+
+    // Initial render so the trigger reflects the default selection (Türkiye)
+    pcSelect(0);
+
+    function openJoinDrawer() {
+      // Reset form state every time it opens
+      joinForm.reset();
+      joinForm.style.display = '';
+      joinThanks.style.display = 'none';
+      joinError.textContent = '';
+      joinSubmitBtn.disabled = false;
+      joinSubmitBtn.textContent = 'Send';
+      // Reset country-code dropdown to default (Türkiye)
+      pcSelect(0);
+      pcClose();
+      joinDrawer.classList.add('open');
+    }
+    function closeJoinDrawer() {
+      pcClose();
+      joinDrawer.classList.remove('open');
+    }
+
+    document.getElementById('btn-join').onclick = openJoinDrawer;
+    document.getElementById('closeJoin').onclick = closeJoinDrawer;
+    joinDrawer.onclick = function(e) { if (e.target === joinDrawer) closeJoinDrawer(); };
+
+    // -------------------- Subscribe drawer --------------------
+    // Submits to Netlify Forms ('/' with form-name=subscribe). The form is
+    // declared statically in index.html, so Netlify already has it
+    // registered — POSTs from this page reach the same subscribe list.
+    var subscribeDrawer = document.getElementById('subscribeDrawer');
+    var subscribeForm = document.getElementById('subscribeForm');
+    var subscribeThanks = document.getElementById('subscribeThanks');
+    var subscribeError = document.getElementById('subscribeError');
+    var subscribeEmail = document.getElementById('subscribeEmail');
+    var subscribeSubmitBtn = subscribeForm.querySelector('.join-submit');
+    var SUB_STORE_KEY = 'nocturne-subscribed-emails-v1';
+
+    function getStoredSubs() {
+      try {
+        var raw = localStorage.getItem(SUB_STORE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+    function addStoredSub(email) {
+      try {
+        var list = getStoredSubs();
+        if (list.indexOf(email) === -1) list.push(email);
+        localStorage.setItem(SUB_STORE_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+    function alreadySubscribed(email) {
+      return getStoredSubs().indexOf(email) !== -1;
+    }
+    function encodeFormData(data) {
+      return Object.keys(data).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]);
+      }).join('&');
+    }
+
+    function openSubscribeDrawer() {
+      subscribeForm.reset();
+      subscribeForm.style.display = '';
+      subscribeThanks.style.display = 'none';
+      subscribeError.textContent = '';
+      subscribeSubmitBtn.disabled = false;
+      subscribeSubmitBtn.textContent = 'Subscribe';
+      subscribeDrawer.classList.add('open');
+      setTimeout(function() { subscribeEmail.focus(); }, 50);
+    }
+    function closeSubscribeDrawer() { subscribeDrawer.classList.remove('open'); }
+
+    document.getElementById('btn-subscribe').onclick = openSubscribeDrawer;
+    document.getElementById('closeSubscribe').onclick = closeSubscribeDrawer;
+    subscribeDrawer.onclick = function(e) {
+      if (e.target === subscribeDrawer) closeSubscribeDrawer();
+    };
+
+    subscribeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = subscribeEmail.value.trim().toLowerCase();
+      subscribeError.textContent = '';
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        subscribeError.textContent = 'Please enter a valid email address.';
+        return;
+      }
+      if (alreadySubscribed(email)) {
+        subscribeError.textContent = "You're already subscribed with this email. We've got you covered for the next issue.";
+        return;
+      }
+      subscribeSubmitBtn.disabled = true;
+      subscribeSubmitBtn.textContent = 'Sending…';
+
+      fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: encodeFormData({
+          'form-name': 'subscribe',
+          'email': email,
+          'source': 'Reader topbar'
+        })
+      }).then(function(res) {
+        if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+        addStoredSub(email);
+        subscribeForm.style.display = 'none';
+        subscribeThanks.style.display = '';
+      }).catch(function(err) {
+        subscribeSubmitBtn.disabled = false;
+        subscribeSubmitBtn.textContent = 'Subscribe';
+        subscribeError.textContent = "Couldn't subscribe just now. Please try again in a moment.";
+        console.error('Subscribe failed:', err);
+      });
+    });
+
+    joinForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var name = document.getElementById('joinName').value.trim();
+      var email = document.getElementById('joinEmail').value.trim();
+      var phoneCode = document.getElementById('joinPhoneCode').value;
+      var phone = document.getElementById('joinPhone').value.trim();
+      var isAci = joinIsAci.checked;
+      var cls = document.getElementById('joinClass').value;
+
+      // Every field is mandatory. Validate in order so the user gets a single
+      // clear message at a time.
+      if (!name) { joinError.textContent = 'Please enter your name.'; return; }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        joinError.textContent = 'Please enter a valid email address.'; return;
+      }
+      if (!phoneCode) {
+        joinError.textContent = 'Please choose your country code.'; return;
+      }
+      // Allow digits, spaces, dashes, parens — but require at least 6 digits.
+      var digitsOnly = phone.replace(/\D/g, '');
+      if (!phone || digitsOnly.length < 6) {
+        joinError.textContent = 'Please enter a valid phone number.'; return;
+      }
+      // The magazine is run by ACI students — applicants must be ACI students.
+      if (!isAci) {
+        joinError.textContent = 'Nocturne is run by ACI students, and we can only accept submissions from within the school. Thank you for your interest — we hope you keep reading.';
+        return;
+      }
+      if (!cls) {
+        joinError.textContent = 'Please select your class.'; return;
+      }
+      joinError.textContent = '';
+
+      // Send to FormSubmit. The _subject / _template / _captcha keys are
+      // FormSubmit-specific config that don't appear in the email body.
+      joinSubmitBtn.disabled = true;
+      joinSubmitBtn.textContent = 'Sending…';
+
+      var payload = {
+        Name: name,
+        Email: email,
+        Phone: phoneCode + ' ' + phone,
+        'ACI student': 'Yes',
+        Class: cls,
+        _subject: 'Nocturne — New join request from ' + name,
+        _template: 'table',
+        _captcha: 'false'
+      };
+
+      fetch(JOIN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }).then(function(res) {
+        if (!res.ok) throw new Error('Request failed (' + res.status + ')');
+        return res.json();
+      }).then(function() {
+        // Success — swap to thank-you state.
+        joinForm.style.display = 'none';
+        joinThanks.style.display = '';
+      }).catch(function(err) {
+        joinSubmitBtn.disabled = false;
+        joinSubmitBtn.textContent = 'Send';
+        joinError.textContent = 'Couldn\'t send your message. Please try again in a moment.';
+        console.error('Join form submit failed:', err);
+      });
+    });
+
+    // -------------------- About drawer --------------------
+    var aboutDrawer = document.getElementById('aboutDrawer');
+    function openAboutDrawer() { aboutDrawer.classList.add('open'); }
+    function closeAboutDrawer() { aboutDrawer.classList.remove('open'); }
+
+    document.getElementById('btn-about').onclick = openAboutDrawer;
+    document.getElementById('closeAbout').onclick = closeAboutDrawer;
+    aboutDrawer.onclick = function(e) { if (e.target === aboutDrawer) closeAboutDrawer(); };
+
+    // The bold "Join Us" inline link in the About copy — close About,
+    // then open the Join Us drawer.
+    var aboutJoinLink = document.getElementById('aboutJoinLink');
+    if (aboutJoinLink) {
+      aboutJoinLink.addEventListener('click', function() {
+        closeAboutDrawer();
+        openJoinDrawer();
+      });
+    }
+
+    // -------------------- Onboarding tour --------------------
+    // Skippable guided walkthrough of the main controls. Auto-runs once
+    // per browser (remembered via localStorage), and re-triggerable from
+    // the "Take a tour" link in the About drawer.
+    var TOUR_STEPS = [
+      {
+        target: null,
+        side: 'center',
+        title: 'Welcome to Nocturne.',
+        body: 'A quick tour of the controls — about thirty seconds. Skip any time.'
+      },
+      {
+        target: '#btn-issues',
+        side: 'bottom',
+        title: 'Issues',
+        body: 'Switch between past and present issues here.'
+      },
+      {
+        target: '#btn-download',
+        side: 'bottom',
+        title: 'Download',
+        body: 'Save an issue as a PDF — recommended for the sharpest reading quality.'
+      },
+      {
+        target: '#btn-join',
+        side: 'bottom',
+        title: 'Join Us',
+        body: 'Got a piece, a photograph, or something to say? Submit through the form here.'
+      },
+      {
+        target: '#btn-about',
+        side: 'bottom',
+        title: 'About',
+        body: 'A short note from the editors — what Nocturne is and what we publish.'
+      },
+      {
+        target: '.controls-center',
+        side: 'top',
+        title: 'Read at your own pace',
+        body: 'Use the arrows to flip pages, or click the page indicator to jump to any specific page.'
+      },
+      {
+        target: '#btn-enlarge',
+        side: 'top',
+        title: 'Enlarge',
+        body: 'Make the whole magazine bigger so the text is easier to read.'
+      },
+      {
+        target: '#btn-zoom',
+        side: 'top',
+        title: 'Magnifier',
+        body: 'Toggle on, then hover anywhere on the page to zoom into details.'
+      }
+    ];
+
+    var tourRoot      = document.getElementById('tourRoot');
+    var tourHighlight = document.getElementById('tourHighlight');
+    var tourPopup     = document.getElementById('tourPopup');
+    var tourArrow     = document.getElementById('tourArrow');
+    var tourTitle     = document.getElementById('tourTitle');
+    var tourBody      = document.getElementById('tourBody');
+    var tourStepNum   = document.getElementById('tourStepNum');
+    var tourStepTotal = document.getElementById('tourStepTotal');
+    var tourBackBtn   = document.getElementById('tourBack');
+    var tourNextBtn   = document.getElementById('tourNext');
+    var tourSkipBtn   = document.getElementById('tourSkip');
+    var TOUR_STORAGE_KEY = 'nocturne-tour-completed-v1';
+    var tourIndex = 0;
+
+    tourStepTotal.textContent = String(TOUR_STEPS.length);
+
+    function tourSafeStorage(read, value) {
+      try {
+        if (read) return localStorage.getItem(TOUR_STORAGE_KEY);
+        localStorage.setItem(TOUR_STORAGE_KEY, value);
+      } catch (e) { /* storage may be disabled — fail silently */ }
+      return null;
+    }
+
+    function positionTourFor(step) {
+      // Welcome step: center the popup, hide the highlight.
+      if (!step.target) {
+        tourRoot.classList.remove('has-target');
+        tourPopup.setAttribute('data-side', 'center');
+        var pw = tourPopup.offsetWidth;
+        var ph = tourPopup.offsetHeight;
+        tourPopup.style.left = ((window.innerWidth  - pw) / 2) + 'px';
+        tourPopup.style.top  = ((window.innerHeight - ph) / 2) + 'px';
+        return;
+      }
+      var el = document.querySelector(step.target);
+      if (!el) {
+        // Target missing — fall back to centered popup
+        tourRoot.classList.remove('has-target');
+        tourPopup.setAttribute('data-side', 'center');
+        return;
+      }
+      tourRoot.classList.add('has-target');
+      var r = el.getBoundingClientRect();
+      // Pad the highlight a touch beyond the element.
+      var pad = 6;
+      tourHighlight.style.top    = (r.top - pad) + 'px';
+      tourHighlight.style.left   = (r.left - pad) + 'px';
+      tourHighlight.style.width  = (r.width + pad * 2) + 'px';
+      tourHighlight.style.height = (r.height + pad * 2) + 'px';
+
+      // Decide which side the popup goes on.
+      tourPopup.setAttribute('data-side', step.side === 'top' ? 'top' : 'bottom');
+      var pw = tourPopup.offsetWidth;
+      var ph = tourPopup.offsetHeight;
+      var GAP = 14;
+      var targetCenterX = r.left + r.width / 2;
+
+      // Try to center the popup horizontally on the target, then clamp it
+      // inside the viewport. Vertical placement comes from step.side.
+      var left = targetCenterX - pw / 2;
+      left = Math.max(12, Math.min(left, window.innerWidth - pw - 12));
+      var top = (step.side === 'top') ? (r.top - ph - GAP) : (r.bottom + GAP);
+      top = Math.max(12, Math.min(top, window.innerHeight - ph - 12));
+      tourPopup.style.left = left + 'px';
+      tourPopup.style.top  = top  + 'px';
+
+      // Slide the arrow inside the popup so it always points at the target's
+      // center — the CSS transition on .tour-popup-arrow's `left` makes it
+      // glide horizontally between steps. Clamped so it never escapes the
+      // popup's rounded corners.
+      var ARROW_HALF = 7;       // half of arrow's 14px width
+      var ARROW_MIN  = 14;      // keep clear of the popup's left corner
+      var ARROW_MAX  = pw - 14 - 14; // and the right corner
+      var arrowLeft = targetCenterX - left - ARROW_HALF;
+      arrowLeft = Math.max(ARROW_MIN, Math.min(arrowLeft, ARROW_MAX));
+      tourArrow.style.left = arrowLeft + 'px';
+    }
+
+    function renderTourStep() {
+      var step = TOUR_STEPS[tourIndex];
+      tourTitle.textContent = step.title;
+      tourBody.textContent  = step.body;
+      tourStepNum.textContent = String(tourIndex + 1);
+      tourBackBtn.disabled = (tourIndex === 0);
+      var isLast = (tourIndex === TOUR_STEPS.length - 1);
+      tourNextBtn.textContent = isLast ? 'Got it' : 'Next';
+      tourNextBtn.classList.toggle('is-final', isLast);
+      // Defer position so layout has the popup's measured size.
+      requestAnimationFrame(function() { positionTourFor(step); });
+    }
+
+    function startTour() {
+      tourIndex = 0;
+      tourRoot.setAttribute('aria-hidden', 'false');
+      tourRoot.classList.add('active');
+      renderTourStep();
+    }
+    function endTour(markCompleted) {
+      tourRoot.classList.remove('active');
+      tourRoot.classList.remove('has-target');
+      tourRoot.setAttribute('aria-hidden', 'true');
+      if (markCompleted) tourSafeStorage(false, '1');
+    }
+
+    tourNextBtn.addEventListener('click', function() {
+      if (tourIndex >= TOUR_STEPS.length - 1) { endTour(true); return; }
+      tourIndex += 1;
+      renderTourStep();
+    });
+    tourBackBtn.addEventListener('click', function() {
+      if (tourIndex === 0) return;
+      tourIndex -= 1;
+      renderTourStep();
+    });
+    tourSkipBtn.addEventListener('click', function() { endTour(true); });
+
+    // Re-trigger from the About drawer.
+    var aboutTakeTour = document.getElementById('aboutTakeTour');
+    if (aboutTakeTour) {
+      aboutTakeTour.addEventListener('click', function() {
+        closeAboutDrawer();
+        // Wait for the drawer to close so the highlight lands on real targets.
+        setTimeout(startTour, 220);
+      });
+    }
+
+    // Reposition on resize so the highlight tracks if the layout shifts.
+    window.addEventListener('resize', function() {
+      if (tourRoot.classList.contains('active')) {
+        positionTourFor(TOUR_STEPS[tourIndex]);
+      }
+    });
+
+    // Expose the deferred-tour trigger to module scope so the issues
+    // drawer's card-click handler can fire it once the user picks an issue.
+    fireDeferredTour = function() {
+      if (!tourSafeStorage(true)) setTimeout(startTour, 500);
+    };
+
+    // Auto-run on first visit, but only AFTER the first issue finishes
+    // rendering — otherwise the highlights would land on a still-loading
+    // page. SKIP auto-run when ?open=issues is set: the user came from the
+    // landing page and we want them to pick an issue first, then tour.
+    if (!tourSafeStorage(true) && !deferTourUntilIssueSelect) {
+      firstLoadDone.then(function() {
+        // Small extra beat so the loading screen's fade-out has settled
+        // and the cover image has painted.
+        setTimeout(startTour, 600);
+      });
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+      if (tourRoot.classList.contains('active')) {
+        if (e.key === 'Escape') endTour(true);
+        else if (e.key === 'ArrowRight' || e.key === 'Enter') tourNextBtn.click();
+        else if (e.key === 'ArrowLeft') tourBackBtn.click();
+        return;
+      }
+      if (drawer.classList.contains('open')) {
+        if (e.key === 'Escape') drawer.classList.remove('open');
+        return;
+      }
+      if (joinDrawer.classList.contains('open')) {
+        if (e.key === 'Escape') closeJoinDrawer();
+        return;
+      }
+      if (subscribeDrawer.classList.contains('open')) {
+        if (e.key === 'Escape') closeSubscribeDrawer();
+        return;
+      }
+      if (aboutDrawer.classList.contains('open')) {
+        if (e.key === 'Escape') closeAboutDrawer();
+        return;
+      }
+      if (e.key === 'Escape' && magnifierEnabled) { setMagnifier(false); return; }
+      if (e.key === 'ArrowRight' && pageFlip) pageFlip.flipNext();
+      if (e.key === 'ArrowLeft' && pageFlip) pageFlip.flipPrev();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 50); });
+  } else {
+    setTimeout(init, 50);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nocturne — Editor</title>
+  <script>
+    // Force re-authentication on every visit. Wiping the saved session
+    // before the widget initializes means a stale browser can't slip
+    // an editor into the CMS without entering credentials.
+    try {
+      localStorage.removeItem('gotrue.user');
+      sessionStorage.removeItem('gotrue.user');
+      document.cookie = 'nf_jwt=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <!-- Netlify Identity (auth) -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    // Inject a show/hide password eye button into the widget's password
+    // fields. The widget renders into the page DOM (no iframe), so we
+    // can find its inputs and decorate them.
+    (function() {
+      if (!window.netlifyIdentity) return;
+      var ni = window.netlifyIdentity;
+      var pwdInterval = null;
+      ni.on('open', function() {
+        installPwdToggle();
+        if (pwdInterval) clearInterval(pwdInterval);
+        pwdInterval = setInterval(installPwdToggle, 350);
+      });
+      ni.on('close', function() {
+        if (pwdInterval) { clearInterval(pwdInterval); pwdInterval = null; }
+      });
+
+      var EYE_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      var EYE_OFF  = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+      function installPwdToggle() {
+        var inputs = document.querySelectorAll('.netlify-identity-widget input[type="password"], .nc-loginButton ~ * input[type="password"], input[type="password"]');
+        Array.prototype.forEach.call(inputs, function(input) {
+          if (input.dataset.eyeReady) return;
+          input.dataset.eyeReady = '1';
+          var wrap = input.parentElement;
+          if (!wrap) return;
+          var pos = getComputedStyle(wrap).position;
+          if (pos === 'static') wrap.style.position = 'relative';
+          input.style.paddingRight = '40px';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.setAttribute('aria-label', 'Show password');
+          btn.style.cssText = 'position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;color:#888;display:flex;align-items:center;justify-content:center;border-radius:4px;z-index:2;';
+          btn.onmouseenter = function() { btn.style.color = '#333'; };
+          btn.onmouseleave = function() { btn.style.color = '#888'; };
+          btn.innerHTML = EYE_OPEN;
+          var visible = false;
+          btn.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            visible = !visible;
+            input.type = visible ? 'text' : 'password';
+            btn.innerHTML = visible ? EYE_OFF : EYE_OPEN;
+            btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+          });
+          wrap.appendChild(btn);
+        });
+      }
+      // Also poll occasionally for Decap CMS' own login screen, in case it
+      // renders a password input outside the Identity widget container.
+      setInterval(installPwdToggle, 800);
+    })();
+  </script>
+  <!-- Decap CMS — drop-in editor that reads /admin/config.yml -->
+  <script src="https://unpkg.com/decap-cms@^3.4.0/dist/decap-cms.js"></script>
+</body>
+</html>
